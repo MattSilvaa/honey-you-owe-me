@@ -303,15 +303,30 @@ function updateRowInPlace(tr, row, val) {
   if (numInput) numInput.value = val;
 }
 
+function cleanDesc(desc) {
+  return desc
+    .replace(/\*/g, ' ')
+    .replace(/\s+\d{5,}/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase()
+    .replace(/\b\w/g, c => c.toUpperCase())
+    .slice(0, 25)
+    .trim();
+}
+
 function buildDayNote(date, items) {
-  const parts = items.map(r => {
-    const pct = getPct(r);
-    if (pct === 0) return null;
-    const desc = r.desc.length > 18 ? r.desc.slice(0, 17) + '…' : r.desc;
-    return `${desc} ${pct}%=$${Math.abs(r.amt * pct / 100).toFixed(2)}`;
-  }).filter(Boolean);
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const [m, d] = date.split('/');
+  const header = `${months[parseInt(m)-1]} ${parseInt(d)} — your share:`;
+  const lines = items
+    .filter(r => getPct(r) > 0)
+    .map(r => {
+      const pct = getPct(r);
+      return `• ${cleanDesc(r.desc)} $${Math.abs(r.amt * pct / 100).toFixed(2)} (${pct}%)`;
+    });
   const total = Math.abs(items.reduce((s, r) => s + r.amt * (getPct(r) / 100), 0)).toFixed(2);
-  let note = `${date}: ${parts.join(', ')} [total $${total}]`;
+  let note = [header, ...lines, `Total: $${total}`].join('\n');
   if (note.length > 280) note = note.slice(0, 279) + '…';
   return note;
 }
