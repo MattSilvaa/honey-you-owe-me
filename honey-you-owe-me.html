@@ -270,14 +270,26 @@ function render() {
   document.getElementById('main').style.display = hasRows ? 'flex' : 'none';
   document.getElementById('empty-state').style.display = hasRows ? 'none' : 'flex';
 
-  tbody.querySelectorAll('.pct-slider').forEach(el => {
-    el.addEventListener('input', e => { const row=allRows.find(r=>getKey(r)===e.target.dataset.key); if(row){setPct(row,parseInt(e.target.value));render();} });
+}
+
+function setupDelegation() {
+  const tbody = document.getElementById('tbody');
+  tbody.addEventListener('input', e => {
+    if (!e.target.classList.contains('pct-slider')) return;
+    const row = allRows.find(r => getKey(r) === e.target.dataset.key);
+    if (row) { setPct(row, parseInt(e.target.value)); render(); }
   });
-  tbody.querySelectorAll('.pct-num').forEach(el => {
-    el.addEventListener('change', e => { const val=Math.min(100,Math.max(0,parseInt(e.target.value)||0)); const row=allRows.find(r=>getKey(r)===e.target.dataset.key); if(row){setPct(row,val);render();} });
+  tbody.addEventListener('change', e => {
+    if (!e.target.classList.contains('pct-num')) return;
+    const val = Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
+    const row = allRows.find(r => getKey(r) === e.target.dataset.key);
+    if (row) { setPct(row, val); render(); }
   });
-  tbody.querySelectorAll('.qbtn').forEach(el => {
-    el.addEventListener('click', e => { const row=allRows.find(r=>getKey(r)===e.target.dataset.key); if(row){setPct(row,parseInt(e.target.dataset.val));render();} });
+  tbody.addEventListener('click', e => {
+    const btn = e.target.closest('.qbtn');
+    if (!btn) return;
+    const row = allRows.find(r => getKey(r) === btn.dataset.key);
+    if (row) { setPct(row, parseInt(btn.dataset.val)); render(); }
   });
 }
 
@@ -306,6 +318,7 @@ document.getElementById('new-btn').addEventListener('click', ()=>{
   document.getElementById('drop-zone').style.display='flex';
   document.getElementById('file-input').value='';
 });
+setupDelegation();
 </script>
 </body>
 </html>
