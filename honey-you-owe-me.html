@@ -77,7 +77,9 @@
   tr.day-group td { background: var(--surface); padding: 6px 10px; font-weight: 600; font-size: 11px; letter-spacing: .04em; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); font-family: var(--mono); }
   tr.day-group td.day-label { color: var(--accent); }
   tr.day-group td.day-total { text-align: right; color: var(--text); }
-  tr.day-group td.day-wife { text-align: right; color: var(--info); }
+  tr.day-group td.day-wife { text-align: right; color: var(--info); display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+  .day-venmo-btn { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 5px; background: #008CFF; border: none; color: #fff; cursor: pointer; font-family: var(--font); opacity: .85; transition: opacity .15s; }
+  .day-venmo-btn:hover { opacity: 1; }
 
   tr.item td { padding: 6px 10px; border-bottom: 1px solid #1e1e1e; vertical-align: middle; }
   tr.item td.desc { color: var(--text); max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -128,6 +130,10 @@
         <span class="ctrl-label">to</span>
         <input type="date" id="date-to">
       </div>
+      <div class="ctrl-group">
+        <span class="ctrl-label">@</span>
+        <input type="text" id="venmo-user" placeholder="venmo username" style="background:none;border:none;outline:none;color:var(--info);font-family:var(--mono);font-size:12px;width:120px;">
+      </div>
       <button class="act-btn" id="apply-btn">Apply</button>
       <button class="rst-btn" id="reset-btn">Reset %s</button>
       <button class="new-btn" id="new-btn">↩ New CSV</button>
@@ -162,8 +168,8 @@
 </div>
 
 <script>
-let allRows = [], pctMap = {};
-const DEFAULT_PCTS = { 'cookunity': 50, 'costco gas': 0 };
+let allRows = [], pctMap = {}, filteredRows = [];
+const DEFAULT_PCTS = { 'cookunity': 50, 'costco gas': 0, 'tim & scotts': 0, 'barbershop': 0 };
 
 function matchDefault(desc) {
   const d = desc.toLowerCase();
@@ -206,12 +212,13 @@ function fromInputDate(s) { const [y,m,d]=s.split('-'); return new Date(y,m-1,d)
 function render() {
   const from = document.getElementById('date-from').value;
   const to   = document.getElementById('date-to').value;
-  const filtered = allRows.filter(r => {
+  filteredRows = allRows.filter(r => {
     const d = parseDate(r.date);
     if (from && d < fromInputDate(from)) return false;
     if (to   && d > fromInputDate(to))   return false;
     return true;
   });
+  const filtered = filteredRows;
   const byDate = {};
   filtered.forEach(r => { if (!byDate[r.date]) byDate[r.date]=[]; byDate[r.date].push(r); });
   const dates = Object.keys(byDate).sort((a,b)=>parseDate(b)-parseDate(a));
@@ -226,7 +233,7 @@ function render() {
     gTotal+=dTotal; gWife+=dWife;
     const hrow = document.createElement('tr');
     hrow.className = 'day-group';
-    hrow.innerHTML = `<td class="day-label" colspan="2">${date}</td><td></td><td class="day-total">${fmt(dTotal)}</td><td></td><td class="day-wife">${fmt(dWife)}</td>`;
+    hrow.innerHTML = `<td class="day-label" colspan="2">${date}</td><td></td><td class="day-total">${fmt(dTotal)}</td><td></td><td class="day-wife"><span>${fmt(dWife)}</span><button class="day-venmo-btn" data-date="${date}">V</button></td>`;
     tbody.appendChild(hrow);
 
     items.forEach(row => {
@@ -260,10 +267,12 @@ function render() {
   document.getElementById('s-you').textContent   = fmtPos(gTotal-gWife);
   document.getElementById('s-count').textContent = filtered.length;
 
-  const amt = Math.abs(gWife).toFixed(2);
-  const note = encodeURIComponent('Your share of expenses 💳');
   document.getElementById('venmo-btn').onclick = () => {
-    window.open(`https://venmo.com/?txn=charge&amount=${amt}&note=${note}`, '_blank');
+    const user = document.getElementById('venmo-user').value.trim();
+    const amt = Math.abs(gWife).toFixed(2);
+    const note = encodeURIComponent('Your share of expenses 💳');
+    const base = user ? `https://venmo.com/${encodeURIComponent(user)}` : 'https://venmo.com/';
+    window.open(`${base}?txn=charge&amount=${amt}&note=${note}`, '_blank');
   };
 
   const hasRows = filtered.length > 0;
@@ -272,24 +281,83 @@ function render() {
 
 }
 
+function updateSummaryTotals() {
+  let gTotal = 0, gWife = 0;
+  filteredRows.forEach(r => { gTotal += r.amt; gWife += r.amt * (getPct(r) / 100); });
+  document.getElementById('s-total').textContent = fmtPos(gTotal);
+  document.getElementById('s-wife').textContent  = fmtPos(gWife);
+  document.getElementById('s-you').textContent   = fmtPos(gTotal - gWife);
+}
+
+function updateRowInPlace(tr, row, val) {
+  tr.className = 'item' + (val === 0 ? ' zero' : '');
+  const wifeCell = tr.querySelector('.wife-share');
+  if (wifeCell) wifeCell.textContent = val === 0 ? '—' : fmt(row.amt * (val / 100));
+  const descCell = tr.querySelector('.desc');
+  if (descCell) {
+    const pill = descCell.querySelector('.pill');
+    if (val === 0 && !pill) descCell.insertAdjacentHTML('beforeend', '<span class="pill">excl</span>');
+    else if (val !== 0 && pill) pill.remove();
+  }
+  const numInput = tr.querySelector('.pct-num');
+  if (numInput) numInput.value = val;
+}
+
+function buildDayNote(date, items) {
+  const parts = items.map(r => {
+    const pct = getPct(r);
+    if (pct === 0) return null;
+    const desc = r.desc.length > 18 ? r.desc.slice(0, 17) + '…' : r.desc;
+    return `${desc} ${pct}%=$${Math.abs(r.amt * pct / 100).toFixed(2)}`;
+  }).filter(Boolean);
+  const total = Math.abs(items.reduce((s, r) => s + r.amt * (getPct(r) / 100), 0)).toFixed(2);
+  let note = `${date}: ${parts.join(', ')} [total $${total}]`;
+  if (note.length > 280) note = note.slice(0, 279) + '…';
+  return note;
+}
+
 function setupDelegation() {
   const tbody = document.getElementById('tbody');
+
+  // Slider drag: update in-place (no DOM rebuild, keeps drag working)
   tbody.addEventListener('input', e => {
     if (!e.target.classList.contains('pct-slider')) return;
     const row = allRows.find(r => getKey(r) === e.target.dataset.key);
-    if (row) { setPct(row, parseInt(e.target.value)); render(); }
+    if (!row) return;
+    const val = parseInt(e.target.value);
+    setPct(row, val);
+    updateRowInPlace(e.target.closest('tr.item'), row, val);
+    updateSummaryTotals();
   });
+
+  // Slider drag end OR number input commit: full re-render (updates day totals etc.)
   tbody.addEventListener('change', e => {
+    if (e.target.classList.contains('pct-slider')) { render(); return; }
     if (!e.target.classList.contains('pct-num')) return;
     const val = Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
     const row = allRows.find(r => getKey(r) === e.target.dataset.key);
     if (row) { setPct(row, val); render(); }
   });
+
+  // Quick % buttons
   tbody.addEventListener('click', e => {
-    const btn = e.target.closest('.qbtn');
-    if (!btn) return;
-    const row = allRows.find(r => getKey(r) === btn.dataset.key);
-    if (row) { setPct(row, parseInt(btn.dataset.val)); render(); }
+    const qbtn = e.target.closest('.qbtn');
+    if (qbtn) {
+      const row = allRows.find(r => getKey(r) === qbtn.dataset.key);
+      if (row) { setPct(row, parseInt(qbtn.dataset.val)); render(); }
+      return;
+    }
+    // Per-day Venmo button
+    const vbtn = e.target.closest('.day-venmo-btn');
+    if (vbtn) {
+      const date = vbtn.dataset.date;
+      const user = document.getElementById('venmo-user').value.trim();
+      const items = filteredRows.filter(r => r.date === date);
+      const amt = Math.abs(items.reduce((s, r) => s + r.amt * (getPct(r) / 100), 0)).toFixed(2);
+      const note = encodeURIComponent(buildDayNote(date, items));
+      const base = user ? `https://venmo.com/${encodeURIComponent(user)}` : 'https://venmo.com/';
+      window.open(`${base}?txn=charge&amount=${amt}&note=${note}`, '_blank');
+    }
   });
 }
 
