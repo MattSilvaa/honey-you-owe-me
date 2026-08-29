@@ -171,7 +171,10 @@
   .req-note { width: 100%; min-height: 62px; resize: vertical; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: var(--mono); font-size: 11px; line-height: 1.5; padding: 8px 10px; outline: none; }
   .req-note:focus { border-color: var(--accent); }
   .req-actions { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+  .note-warn { font-size: 10px; color: var(--warn); margin-left: auto; }
+  .note-warn[hidden] { display: none; }
   .note-len { font-size: 10px; color: var(--soft); font-family: var(--mono); margin-left: auto; }
+  .note-warn:not([hidden]) + .note-len { margin-left: 10px; }
   .note-len.over { color: var(--warn); }
   .hint { font-size: 11px; color: var(--muted); }
   .hint b { color: var(--text); font-weight: 500; }
@@ -408,10 +411,25 @@ const toInputDate = s => { const [m, d, y] = s.split('/'); return y + '-' + m.pa
 const fromInputDate = s => { const [y, m, d] = s.split('-'); return new Date(+y, +m - 1, +d); };
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const prettyDate = s => { const [m, d] = s.split('/'); return MONTHS[+m - 1] + ' ' + (+d); };
+/* Venmo rejects notes that contain links, so scrub anything URL-shaped. */
+const TLDS = 'com|net|org|co|io|gov|edu|us|uk|ca|biz|info|shop|store|app|tv|me|ly|cc|xyz|online|site|club|dev|ai|link';
+const TLD_RE = new RegExp('\\b([a-z0-9][a-z0-9-]*)\\.(?:' + TLDS + ')\\b(?:\\/\\S*)?', 'gi');
+const LINK_RE = new RegExp('(?:https?:\\/\\/|www\\.)\\S+|[\\w.+-]+@[\\w-]+\\.[a-z]{2,}|\\b[a-z0-9][a-z0-9-]*\\.(?:' + TLDS + ')\\b', 'i');
+function stripLinks(s) {
+  return String(s)
+    .replace(/\b(?:https?|ftp):\/\//gi, ' ')                       // drop the scheme, keep the name
+    .replace(/\bwww\./gi, ' ')                                     // drop the www. prefix
+    .replace(/[\w.+-]+@[\w-]+\.[a-z]{2,}/gi, ' ')                  // emails
+    .replace(TLD_RE, '$1')                                         // saltyseacoffee.com -> saltyseacoffee
+    .replace(/\b([a-z0-9][a-z0-9-]*)\.([a-z]{2,63})\b/gi, '$1 $2') // any other x.y -> x y
+    .replace(/\s+/g, ' ').trim();
+}
+const hasLink = s => LINK_RE.test(s);
 function cleanDesc(desc) {
-  return desc.replace(/\*/g, ' ').replace(/\s+\d{4,}\b/g, '').replace(/#\d+/g, '')
+  return stripLinks(desc.replace(/\*/g, ' '))
+    .replace(/\s+\d{4,}\b/g, '').replace(/#\d+/g, '')
     .replace(/\s+/g, ' ').trim().toLowerCase()
-    .replace(/\b\w/g, c => c.toUpperCase()).slice(0, 26).trim();
+    .replace(/\b\w/g, c => c.toUpperCase()).slice(0, 26).trim() || 'Charge';
 }
 
 /* ============================== steps ============================== */
@@ -653,7 +671,7 @@ function buildNote(label, rows, mode) {
     }
     note = [head, ...keep, 'Total: ' + money(total)].join('\n');
   }
-  return note;
+  return note.split('\n').map(l => stripLinks(l)).join('\n');
 }
 function buildRequests(force) {
   const mode = $('group-mode').value;
@@ -699,6 +717,7 @@ function renderQueue() {
           ? '<button class="rst-btn" data-act="sent" data-id="' + esc(r.id) + '">Mark sent</button>' +
             '<button class="rst-btn" data-act="skip" data-id="' + esc(r.id) + '">Skip</button>'
           : '<button class="rst-btn" data-act="undo" data-id="' + esc(r.id) + '">Undo</button>') +
+        '<span class="note-warn"' + (hasLink(r.note) ? '' : ' hidden') + '>⚠ looks like a link — Venmo will reject it</span>' +
         '<span class="note-len' + (over ? ' over' : '') + '">' + r.note.length + '/280</span>' +
       '</div></div>';
   }).join('') || '<div class="hint" style="padding:20px">Nothing to request — every charge in range is set to 0%.</div>';
@@ -753,9 +772,11 @@ $('queue').addEventListener('input', e => {
   if (!r) return;
   if (e.target.classList.contains('req-note')) {
     r.note = e.target.value;
-    const len = e.target.closest('.req').querySelector('.note-len');
+    const card = e.target.closest('.req');
+    const len = card.querySelector('.note-len');
     len.textContent = r.note.length + '/280';
     len.classList.toggle('over', r.note.length > 280);
+    card.querySelector('.note-warn').hidden = !hasLink(r.note);
   } else if (e.target.classList.contains('req-amt-in')) {
     r.amount = Math.max(0, parseFloat(e.target.value) || 0);
     updateQueueStats();
