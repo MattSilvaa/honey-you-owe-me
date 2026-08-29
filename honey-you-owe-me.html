@@ -7,21 +7,54 @@
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
+
   :root {
-    --bg: #0f0f0f; --surface: #1a1a1a; --surface2: #222;
-    --border: #2e2e2e; --accent: #c8f241; --accent-dim: rgba(200,242,65,0.12);
+    --bg: #0f0f0f; --surface: #1a1a1a; --surface2: #222; --surface3: #262626;
+    --border: #2e2e2e; --border-soft: #1e1e1e;
+    --accent: #c8f241; --accent-dim: rgba(200,242,65,0.12); --accent-ink: #0f0f0f;
     --text: #f0f0ec; --muted: #888; --soft: #555;
-    --info: #60b4ff; --font: 'Syne', sans-serif; --mono: 'JetBrains Mono', monospace;
+    --info: #60b4ff; --ok: #6ee7a8; --warn: #ffc861;
+    --venmo: #008CFF;
+    --font: 'Syne', sans-serif; --mono: 'JetBrains Mono', monospace;
   }
+  :root[data-theme="light"] {
+    --bg: #f4f5ef; --surface: #ffffff; --surface2: #eceee3; --surface3: #e3e6d8;
+    --border: #d8dbcc; --border-soft: #e8eade;
+    --accent: #5f8500; --accent-dim: rgba(95,133,0,0.12); --accent-ink: #ffffff;
+    --text: #171912; --muted: #6a6e60; --soft: #9a9e8f;
+    --info: #0d6cc9; --ok: #17864f; --warn: #a3690a;
+    --venmo: #0074d4;
+  }
+
   html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font); }
+  body { transition: background .2s, color .2s; }
 
-  #app { display: flex; flex-direction: column; height: 100vh; max-height: 100vh; padding: 16px; overflow: hidden; }
+  #app { display: flex; flex-direction: column; height: 100vh; max-height: 100vh; padding: 16px; overflow: hidden; gap: 12px; }
 
-  .header { flex-shrink: 0; margin-bottom: 14px; }
+  /* ---------- header + stepper ---------- */
+  .header { flex-shrink: 0; display: flex; align-items: flex-start; gap: 16px; }
   .header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
   .header h1 span { color: var(--accent); }
   .header p { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .header-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
 
+  .theme-btn { width: 32px; height: 32px; border-radius: 9px; background: var(--surface); border: 1px solid var(--border); color: var(--text); font-size: 14px; cursor: pointer; line-height: 1; transition: border-color .15s, background .15s; }
+  .theme-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .stepper { display: flex; align-items: center; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
+  .step { display: flex; align-items: center; gap: 7px; font-size: 11px; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px 5px 6px; cursor: default; transition: all .15s; }
+  .step.clickable { cursor: pointer; }
+  .step.clickable:hover { border-color: var(--muted); color: var(--text); }
+  .step .num { width: 18px; height: 18px; border-radius: 50%; background: var(--surface3); color: var(--muted); font-family: var(--mono); font-size: 10px; display: flex; align-items: center; justify-content: center; }
+  .step.active { border-color: var(--accent); color: var(--text); background: var(--accent-dim); }
+  .step.active .num { background: var(--accent); color: var(--accent-ink); }
+  .step.done .num { background: var(--ok); color: var(--accent-ink); }
+  .step-sep { color: var(--soft); font-size: 11px; }
+
+  .pane { display: none; flex-direction: column; flex: 1; min-height: 0; gap: 10px; }
+  .pane.on { display: flex; }
+
+  /* ---------- step 1: drop ---------- */
   #drop-zone {
     flex: 1; border: 1.5px dashed var(--border); border-radius: 12px;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -33,39 +66,47 @@
   #drop-zone strong { color: var(--text); }
   #file-input { display: none; }
 
-  #main { display: none; flex-direction: column; flex: 1; min-height: 0; gap: 10px; }
-
+  /* ---------- shared controls ---------- */
   .controls-bar { flex-shrink: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .ctrl-label { font-size: 11px; color: var(--muted); white-space: nowrap; }
   .ctrl-group { display: flex; align-items: center; gap: 6px; background: var(--surface); border: 1px solid var(--border); border-radius: 7px; padding: 5px 10px; }
-  .ctrl-group input[type=number] { background: none; border: none; outline: none; color: var(--accent); font-family: var(--mono); font-size: 13px; font-weight: 500; width: 38px; text-align: right; }
+  .ctrl-group input[type=number] { background: none; border: none; outline: none; color: var(--accent); font-family: var(--mono); font-size: 13px; font-weight: 500; width: 40px; text-align: right; }
+  .ctrl-group input[type=text] { background: none; border: none; outline: none; color: var(--info); font-family: var(--mono); font-size: 12px; width: 130px; }
   .ctrl-group span { color: var(--muted); font-size: 12px; }
   .range-inputs { display: flex; align-items: center; gap: 6px; }
-  .range-inputs input[type=date] { background: var(--surface); border: 1px solid var(--border); color: var(--text); font-family: var(--font); font-size: 11px; padding: 5px 8px; border-radius: 7px; outline: none; }
-  .range-inputs input[type=date]:focus { border-color: var(--accent); }
-  .act-btn { font-size: 11px; padding: 5px 12px; border-radius: 7px; background: var(--accent-dim); border: 1px solid var(--accent); color: var(--accent); font-family: var(--font); cursor: pointer; transition: all .15s; white-space: nowrap; }
-  .act-btn:hover { background: var(--accent); color: #000; }
-  .rst-btn { font-size: 11px; padding: 5px 12px; border-radius: 7px; background: var(--surface); border: 1px solid var(--border); color: var(--muted); font-family: var(--font); cursor: pointer; white-space: nowrap; }
-  .rst-btn:hover { border-color: var(--muted); color: var(--text); }
-  .new-btn { font-size: 11px; padding: 5px 12px; border-radius: 7px; background: var(--surface); border: 1px solid var(--border); color: var(--muted); font-family: var(--font); cursor: pointer; white-space: nowrap; margin-left: auto; }
-  .new-btn:hover { border-color: var(--muted); color: var(--text); }
+  input[type=date] { background: var(--surface); border: 1px solid var(--border); color: var(--text); font-family: var(--font); font-size: 11px; padding: 5px 8px; border-radius: 7px; outline: none; }
+  input[type=date]:focus { border-color: var(--accent); }
+  select { background: var(--surface); border: 1px solid var(--border); color: var(--text); font-family: var(--font); font-size: 11px; padding: 5px 8px; border-radius: 7px; outline: none; cursor: pointer; }
+  select:focus { border-color: var(--accent); }
 
-  .summary { flex-shrink: 0; display: flex; gap: 16px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 10px 16px; align-items: center; }
+  .act-btn { font-size: 11px; padding: 6px 12px; border-radius: 7px; background: var(--accent-dim); border: 1px solid var(--accent); color: var(--accent); font-family: var(--font); cursor: pointer; transition: all .15s; white-space: nowrap; }
+  .act-btn:hover { background: var(--accent); color: var(--accent-ink); }
+  .rst-btn { font-size: 11px; padding: 6px 12px; border-radius: 7px; background: var(--surface); border: 1px solid var(--border); color: var(--muted); font-family: var(--font); cursor: pointer; white-space: nowrap; }
+  .rst-btn:hover { border-color: var(--muted); color: var(--text); }
+  .push-right { margin-left: auto; }
+
+  .next-btn { font-size: 12px; font-weight: 600; padding: 8px 16px; border-radius: 8px; background: var(--accent); border: 1px solid var(--accent); color: var(--accent-ink); font-family: var(--font); cursor: pointer; white-space: nowrap; transition: opacity .15s; }
+  .next-btn:hover { opacity: .85; }
+  .venmo-btn { background: var(--venmo); border: none; color: #fff; font-family: var(--font); font-size: 12px; font-weight: 600; padding: 8px 14px; border-radius: 8px; cursor: pointer; transition: opacity .15s; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .venmo-btn:hover { opacity: .85; }
+  .venmo-btn:disabled { opacity: .4; cursor: not-allowed; }
+  .venmo-btn .v { font-size: 14px; font-weight: 700; }
+
+  /* ---------- summary ---------- */
+  .summary { flex-shrink: 0; display: flex; gap: 18px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 10px 16px; align-items: center; }
   .sum-item { display: flex; flex-direction: column; gap: 1px; }
   .sum-label { font-size: 9px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
   .sum-val { font-family: var(--mono); font-size: 16px; font-weight: 500; }
   .sum-val.accent { color: var(--accent); }
   .sum-val.info { color: var(--info); }
-  .venmo-btn {
-    margin-left: auto; background: #008CFF; border: none; color: #fff;
-    font-family: var(--font); font-size: 12px; font-weight: 600;
-    padding: 7px 14px; border-radius: 8px; cursor: pointer; transition: opacity .15s;
-    display: flex; align-items: center; gap: 6px; white-space: nowrap;
-  }
-  .venmo-btn:hover { opacity: .85; }
-  .venmo-btn .v { font-size: 14px; font-weight: 700; }
 
-  .table-scroll { flex: 1; min-height: 0; overflow-y: auto; border: 1px solid var(--border); border-radius: 9px; }
+  /* ---------- bulk bar ---------- */
+  .bulk-bar { flex-shrink: 0; display: none; align-items: center; gap: 8px; flex-wrap: wrap; background: var(--accent-dim); border: 1px solid var(--accent); border-radius: 9px; padding: 8px 12px; }
+  .bulk-bar.on { display: flex; }
+  .bulk-count { font-size: 11px; color: var(--accent); font-family: var(--mono); }
+
+  /* ---------- table ---------- */
+  .table-scroll { flex: 1; min-height: 0; overflow-y: auto; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); }
   .table-scroll::-webkit-scrollbar { width: 6px; }
   .table-scroll::-webkit-scrollbar-track { background: transparent; }
   .table-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
@@ -73,51 +114,104 @@
   table { width: 100%; border-collapse: collapse; font-size: 12px; }
   thead th { position: sticky; top: 0; z-index: 2; background: var(--surface2); font-size: 10px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap; }
   thead th.r { text-align: right; }
+  thead th.c { text-align: center; width: 34px; }
 
-  tr.day-group td { background: var(--surface); padding: 6px 10px; font-weight: 600; font-size: 11px; letter-spacing: .04em; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); font-family: var(--mono); }
-  tr.day-group td.day-label { color: var(--accent); }
+  tr.day-group td { background: var(--surface2); padding: 6px 10px; font-weight: 600; font-size: 11px; letter-spacing: .04em; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); font-family: var(--mono); }
+  tr.day-group td.day-label { color: var(--accent); cursor: pointer; }
+  tr.day-group td.day-label:hover { text-decoration: underline; }
   tr.day-group td.day-total { text-align: right; color: var(--text); }
-  tr.day-group td.day-wife { text-align: right; color: var(--info); display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
-  .day-venmo-btn { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 5px; background: #008CFF; border: none; color: #fff; cursor: pointer; font-family: var(--font); opacity: .85; transition: opacity .15s; }
-  .day-venmo-btn:hover { opacity: 1; }
+  tr.day-group td.day-wife { text-align: right; color: var(--info); }
 
-  tr.item td { padding: 6px 10px; border-bottom: 1px solid #1e1e1e; vertical-align: middle; }
-  tr.item td.desc { color: var(--text); max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  tr.item td.cat { color: var(--soft); font-size: 10px; white-space: nowrap; }
+  tr.item td { padding: 6px 10px; border-bottom: 1px solid var(--border-soft); vertical-align: middle; }
+  tr.item.sel td { background: var(--accent-dim); }
+  tr.item td.chk { text-align: center; }
+  tr.item td.chk input { accent-color: var(--accent); cursor: pointer; }
+  tr.item td.desc { color: var(--text); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  tr.item td.cat { color: var(--soft); font-size: 10px; white-space: nowrap; cursor: pointer; }
+  tr.item td.cat:hover { color: var(--accent); }
   tr.item td.amount { text-align: right; font-family: var(--mono); font-size: 11px; color: var(--muted); white-space: nowrap; }
   tr.item td.pct-cell { width: 130px; }
   tr.item td.wife-share { text-align: right; font-family: var(--mono); font-size: 11px; color: var(--info); white-space: nowrap; }
-  tr.item.zero td.wife-share { color: var(--soft); }
-  tr.item.zero td.desc { color: var(--soft); }
+  tr.item.zero td.wife-share, tr.item.zero td.desc { color: var(--soft); }
 
   .pct-wrap { display: flex; align-items: center; gap: 5px; }
-  .pct-num { font-family: var(--mono); font-size: 11px; width: 30px; text-align: right; background: none; border: none; color: var(--accent); outline: none; cursor: pointer; padding: 1px 2px; border-radius: 3px; transition: background .15s; }
+  .pct-num { font-family: var(--mono); font-size: 11px; width: 34px; text-align: right; background: none; border: none; color: var(--accent); outline: none; cursor: pointer; padding: 1px 2px; border-radius: 3px; transition: background .15s; }
   .pct-num:focus { background: var(--accent-dim); }
   .pct-slider { -webkit-appearance: none; appearance: none; width: 60px; height: 3px; border-radius: 2px; background: var(--border); outline: none; cursor: pointer; }
   .pct-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 11px; height: 11px; border-radius: 50%; background: var(--accent); cursor: pointer; }
   .pct-slider::-moz-range-thumb { width: 11px; height: 11px; border-radius: 50%; background: var(--accent); border: none; cursor: pointer; }
   .qset { display: flex; gap: 3px; margin-top: 3px; }
-  .qbtn { font-size: 9px; padding: 2px 5px; border-radius: 4px; background: var(--surface2); border: 1px solid var(--border); color: var(--muted); cursor: pointer; font-family: var(--font); transition: all .12s; }
+  .qbtn { font-size: 9px; padding: 2px 5px; border-radius: 4px; background: var(--surface3); border: 1px solid var(--border); color: var(--muted); cursor: pointer; font-family: var(--font); transition: all .12s; }
   .qbtn:hover { border-color: var(--accent); color: var(--accent); }
   .pill { display: inline-block; font-size: 9px; padding: 1px 5px; border-radius: 10px; background: var(--accent-dim); color: var(--accent); margin-left: 5px; vertical-align: middle; }
-  #empty-state { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 14px; }
+  #empty-state { flex: 1; display: none; align-items: center; justify-content: center; color: var(--muted); font-size: 14px; border: 1px dashed var(--border); border-radius: 9px; }
+
+  /* ---------- step 3: send queue ---------- */
+  .progress-wrap { flex-shrink: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 10px 16px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+  .bar { flex: 1; min-width: 140px; height: 6px; border-radius: 3px; background: var(--surface3); overflow: hidden; }
+  .bar > i { display: block; height: 100%; width: 0%; background: var(--ok); transition: width .25s; }
+
+  .queue { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px; }
+  .queue::-webkit-scrollbar { width: 6px; }
+  .queue::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .req { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 9px; }
+  .req.sent { opacity: .58; border-color: var(--ok); }
+  .req.skipped { opacity: .45; }
+  .req.next { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-dim); }
+  .req-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .req-title { font-size: 13px; font-weight: 600; }
+  .req-meta { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+  .req-amt { margin-left: auto; display: flex; align-items: center; gap: 4px; background: var(--surface2); border: 1px solid var(--border); border-radius: 7px; padding: 4px 9px; }
+  .req-amt span { color: var(--muted); font-family: var(--mono); font-size: 13px; }
+  .req-amt input { background: none; border: none; outline: none; color: var(--info); font-family: var(--mono); font-size: 14px; font-weight: 500; width: 74px; }
+  .badge { font-size: 9px; text-transform: uppercase; letter-spacing: .06em; padding: 2px 7px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }
+  .badge.sent { color: var(--ok); border-color: var(--ok); }
+  .badge.skipped { color: var(--warn); border-color: var(--warn); }
+  .req-note { width: 100%; min-height: 62px; resize: vertical; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: var(--mono); font-size: 11px; line-height: 1.5; padding: 8px 10px; outline: none; }
+  .req-note:focus { border-color: var(--accent); }
+  .req-actions { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+  .note-warn { font-size: 10px; color: var(--warn); margin-left: auto; }
+  .note-warn[hidden] { display: none; }
+  .note-len { font-size: 10px; color: var(--soft); font-family: var(--mono); margin-left: auto; }
+  .note-warn:not([hidden]) + .note-len { margin-left: 10px; }
+  .note-len.over { color: var(--warn); }
+  .hint { font-size: 11px; color: var(--muted); }
+  .hint b { color: var(--text); font-weight: 500; }
 </style>
 </head>
 <body>
 <div id="app">
   <div class="header">
-    <h1>Honey, <span>You Owe Me</span> 💸</h1>
-    <p>Drop your Chase CSV — then Venmo her the damage.</p>
+    <div>
+      <h1>Honey, <span>You Owe Me</span> 💸</h1>
+      <p>Drop the CSV, split the charges, fire off the requests.</p>
+    </div>
+    <div class="header-right">
+      <button class="theme-btn" id="theme-btn" title="Toggle dark / light">☾</button>
+    </div>
   </div>
 
-  <div id="drop-zone">
-    <div class="icon">💳</div>
-    <p><strong>Drop your Chase CSV here</strong> or click to browse</p>
-    <p style="margin-top:6px;font-size:11px;color:var(--soft)">She doesn't need to know this exists.</p>
-    <input type="file" id="file-input" accept=".csv">
+  <div class="stepper" id="stepper">
+    <div class="step" data-step="1"><span class="num">1</span> Import</div>
+    <span class="step-sep">→</span>
+    <div class="step" data-step="2"><span class="num">2</span> Review charges</div>
+    <span class="step-sep">→</span>
+    <div class="step" data-step="3"><span class="num">3</span> Send requests</div>
   </div>
 
-  <div id="main">
+  <!-- ============ STEP 1 ============ -->
+  <div class="pane" id="pane-1">
+    <div id="drop-zone">
+      <div class="icon">💳</div>
+      <p><strong>Drop your Chase CSV here</strong> or click to browse</p>
+      <p style="margin-top:6px;font-size:11px;color:var(--soft)">She doesn't need to know this exists.</p>
+      <input type="file" id="file-input" accept=".csv,text/csv">
+    </div>
+  </div>
+
+  <!-- ============ STEP 2 ============ -->
+  <div class="pane" id="pane-2">
     <div class="controls-bar">
       <span class="ctrl-label">Default %</span>
       <div class="ctrl-group">
@@ -131,12 +225,26 @@
         <input type="date" id="date-to">
       </div>
       <div class="ctrl-group">
-        <span class="ctrl-label">@</span>
-        <input type="text" id="venmo-user" placeholder="venmo username" style="background:none;border:none;outline:none;color:var(--info);font-family:var(--mono);font-size:12px;width:120px;">
+        <span class="ctrl-label">🔍</span>
+        <input type="text" id="search" placeholder="filter description…" style="color:var(--text);width:150px">
       </div>
-      <button class="act-btn" id="apply-btn">Apply</button>
       <button class="rst-btn" id="reset-btn">Reset %s</button>
-      <button class="new-btn" id="new-btn">↩ New CSV</button>
+      <button class="rst-btn" id="new-btn">↩ New CSV</button>
+    </div>
+
+    <div class="bulk-bar" id="bulk-bar">
+      <span class="bulk-count" id="bulk-count">0 selected</span>
+      <span class="ctrl-label">set to</span>
+      <button class="qbtn" data-bulk="0">0%</button>
+      <button class="qbtn" data-bulk="45">45%</button>
+      <button class="qbtn" data-bulk="50">50%</button>
+      <button class="qbtn" data-bulk="100">100%</button>
+      <div class="ctrl-group">
+        <input type="number" id="bulk-pct" min="0" max="100" step="5" value="50">
+        <span>%</span>
+      </div>
+      <button class="act-btn" id="bulk-apply">Apply to selected</button>
+      <button class="rst-btn" id="bulk-clear">Clear selection</button>
     </div>
 
     <div class="summary">
@@ -144,13 +252,14 @@
       <div class="sum-item"><span class="sum-label">She owes</span><span class="sum-val info" id="s-wife">$0</span></div>
       <div class="sum-item"><span class="sum-label">You cover</span><span class="sum-val" id="s-you">$0</span></div>
       <div class="sum-item"><span class="sum-label">Line items</span><span class="sum-val" id="s-count">0</span></div>
-      <button class="venmo-btn" id="venmo-btn"><span class="v">V</span> Request on Venmo</button>
+      <button class="next-btn push-right" id="to-send-btn">Review done → build requests</button>
     </div>
 
-    <div class="table-scroll">
+    <div class="table-scroll" id="table-scroll">
       <table>
         <thead>
           <tr>
+            <th class="c"><input type="checkbox" id="check-all" title="Select all visible"></th>
             <th>Date</th>
             <th>Description</th>
             <th>Category</th>
@@ -162,246 +271,599 @@
         <tbody id="tbody"></tbody>
       </table>
     </div>
+    <div id="empty-state">No transactions match this date range / filter.</div>
   </div>
 
-  <div id="empty-state" style="display:none">No transactions in this date range.</div>
+  <!-- ============ STEP 3 ============ -->
+  <div class="pane" id="pane-3">
+    <div class="controls-bar">
+      <span class="ctrl-label">Group into</span>
+      <select id="group-mode">
+        <option value="single">One request (everything)</option>
+        <option value="day" selected>One per day</option>
+        <option value="week">One per week</option>
+        <option value="category">One per category</option>
+      </select>
+      <div class="ctrl-group">
+        <span class="ctrl-label">@</span>
+        <input type="text" id="venmo-user" placeholder="venmo username">
+      </div>
+      <button class="rst-btn" id="rebuild-btn">↻ Rebuild notes</button>
+      <button class="rst-btn" id="back-btn">← Back to review</button>
+    </div>
+
+    <div class="progress-wrap">
+      <div class="sum-item"><span class="sum-label">Requests</span><span class="sum-val" id="q-count">0</span></div>
+      <div class="sum-item"><span class="sum-label">Sent</span><span class="sum-val" id="q-sent">0</span></div>
+      <div class="sum-item"><span class="sum-label">Requested</span><span class="sum-val info" id="q-amt">$0</span></div>
+      <div class="sum-item"><span class="sum-label">Remaining</span><span class="sum-val accent" id="q-left">$0</span></div>
+      <div class="bar"><i id="q-bar"></i></div>
+      <button class="venmo-btn" id="open-next"><span class="v">V</span> Open next request</button>
+      <button class="act-btn" id="open-all">Open all remaining</button>
+      <button class="rst-btn" id="copy-all">Copy all as text</button>
+      <button class="rst-btn" id="reset-status">Reset statuses</button>
+    </div>
+
+    <p class="hint">Each request opens Venmo prefilled with the amount and an itemized note. Opening one marks it <b>sent</b> — use <b>Undo</b> if it didn't go through. <span id="popup-hint"></span></p>
+
+    <div class="queue" id="queue"></div>
+  </div>
 </div>
 
 <script>
-let allRows = [], pctMap = {}, filteredRows = [];
-const DEFAULT_PCTS = { 'cookunity': 50, 'costco gas': 0, 'tim & scotts': 0, 'barbershop': 0 };
+/* ============================== state ============================== */
+let allRows = [];          // {id, date, desc, cat, amt}
+let pctMap = {};           // id -> pct
+let selected = new Set();  // ids
+let filteredRows = [];
+let requests = [];         // {id, label, sub, itemIds, amount, note, status}
+let reqState = {};         // request id -> {status, note, amount}  (survives regroup)
+let currentStep = 1;
 
-function matchDefault(desc) {
-  const d = desc.toLowerCase();
-  for (const [k,v] of Object.entries(DEFAULT_PCTS)) if (d.includes(k)) return v;
-  return null;
+const DEFAULT_PCTS = { 'cookunity': 50, 'costco gas': 0, 'tim & scotts': 0, 'barbershop': 0 };
+const LS = { theme: 'hyom.theme', user: 'hyom.venmoUser', pct: 'hyom.defaultPct', group: 'hyom.groupMode' };
+const $ = id => document.getElementById(id);
+
+/* ============================== theme ============================== */
+function applyTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  $('theme-btn').textContent = t === 'light' ? '☀' : '☾';
+  $('theme-btn').title = t === 'light' ? 'Switch to dark' : 'Switch to light';
+  try { localStorage.setItem(LS.theme, t); } catch (e) {}
+}
+(function initTheme() {
+  let t = null;
+  try { t = localStorage.getItem(LS.theme); } catch (e) {}
+  if (!t) t = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  applyTheme(t);
+})();
+$('theme-btn').addEventListener('click', () => {
+  applyTheme(document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light');
+});
+
+/* ============================== csv ============================== */
+function splitCSVLine(line) {
+  const out = []; let cur = '', q = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (q) {
+      if (c === '"' && line[i+1] === '"') { cur += '"'; i++; }
+      else if (c === '"') q = false;
+      else cur += c;
+    } else if (c === '"') q = true;
+    else if (c === ',') { out.push(cur); cur = ''; }
+    else cur += c;
+  }
+  out.push(cur);
+  return out.map(s => s.trim());
+}
+function decodeEntities(s) {
+  return s.replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+}
+function esc(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 function parseCSV(text) {
-  const lines = text.trim().split('\n');
-  const header = lines[0].split(',').map(s => s.trim().toLowerCase().replace(/[^a-z ]/g,'').trim());
+  const lines = text.replace(/\r/g, '').trim().split('\n');
+  const header = splitCSVLine(lines[0]).map(s => s.toLowerCase().replace(/[^a-z ]/g, '').trim());
   const dateIdx = header.findIndex(h => h.includes('transaction date') || h === 'date');
   const descIdx = header.findIndex(h => h.includes('description'));
   const amtIdx  = header.findIndex(h => h.includes('amount'));
   const catIdx  = header.findIndex(h => h.includes('category'));
+  const typeIdx = header.findIndex(h => h === 'type' || h.includes('type'));
   const rows = [];
+  let n = 0;
   for (let i = 1; i < lines.length; i++) {
-    const cols = lines[i].split(',');
+    if (!lines[i].trim()) continue;
+    const cols = splitCSVLine(lines[i]);
     if (cols.length < 3) continue;
-    if ((cols[5]||'').trim() === 'Payment') continue;
+    if (typeIdx >= 0 && /payment/i.test(cols[typeIdx] || '')) continue;
     const amt = parseFloat(cols[amtIdx]);
     if (isNaN(amt) || amt >= 0) continue;
-    rows.push({ date: cols[dateIdx]?.trim()||'', desc: cols[descIdx]?.trim()||'', cat: catIdx>=0?(cols[catIdx]?.trim()||''):'', amt });
+    rows.push({
+      id: 'r' + (n++),
+      date: (cols[dateIdx] || '').trim(),
+      desc: decodeEntities((cols[descIdx] || '').trim()),
+      cat: catIdx >= 0 ? decodeEntities((cols[catIdx] || '').trim()) : '',
+      amt
+    });
   }
   return rows;
 }
-function getKey(r) { return r.date+'||'+r.desc+'||'+r.amt; }
+
+/* ============================== helpers ============================== */
+function matchDefault(desc) {
+  const d = desc.toLowerCase();
+  for (const [k, v] of Object.entries(DEFAULT_PCTS)) if (d.includes(k)) return v;
+  return null;
+}
 function getPct(r) {
-  const k = getKey(r);
-  if (pctMap[k] !== undefined) return pctMap[k];
+  if (pctMap[r.id] !== undefined) return pctMap[r.id];
   const d = matchDefault(r.desc);
   if (d !== null) return d;
-  return parseInt(document.getElementById('default-pct').value)||45;
+  return parseInt($('default-pct').value) || 45;
 }
-function setPct(r,v) { pctMap[getKey(r)] = v; }
-const fmt = v => (v<=0?'-':'+')+'$'+Math.abs(v).toFixed(2);
-const fmtPos = v => '$'+Math.abs(v).toFixed(2);
-function parseDate(s) { const [m,d,y]=s.split('/'); return new Date(y,m-1,d); }
-function toInputDate(s) { const [m,d,y]=s.split('/'); return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`; }
-function fromInputDate(s) { const [y,m,d]=s.split('-'); return new Date(y,m-1,d); }
+function setPct(r, v) { pctMap[r.id] = Math.min(100, Math.max(0, v)); }
+function share(r) { return Math.abs(r.amt) * (getPct(r) / 100); }
+const money = v => '$' + Math.abs(v).toFixed(2);
+const parseDate = s => { const [m, d, y] = s.split('/'); return new Date(+y, +m - 1, +d); };
+const toInputDate = s => { const [m, d, y] = s.split('/'); return y + '-' + m.padStart(2, '0') + '-' + d.padStart(2, '0'); };
+const fromInputDate = s => { const [y, m, d] = s.split('-'); return new Date(+y, +m - 1, +d); };
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const prettyDate = s => { const [m, d] = s.split('/'); return MONTHS[+m - 1] + ' ' + (+d); };
+/* Venmo rejects notes that contain links, so scrub anything URL-shaped. */
+const TLDS = 'com|net|org|co|io|gov|edu|us|uk|ca|biz|info|shop|store|app|tv|me|ly|cc|xyz|online|site|club|dev|ai|link';
+const TLD_RE = new RegExp('\\b([a-z0-9][a-z0-9-]*)\\.(?:' + TLDS + ')\\b(?:\\/\\S*)?', 'gi');
+const LINK_RE = new RegExp('(?:https?:\\/\\/|www\\.)\\S+|[\\w.+-]+@[\\w-]+\\.[a-z]{2,}|\\b[a-z0-9][a-z0-9-]*\\.(?:' + TLDS + ')\\b', 'i');
+function stripLinks(s) {
+  return String(s)
+    .replace(/\b(?:https?|ftp):\/\//gi, ' ')                       // drop the scheme, keep the name
+    .replace(/\bwww\./gi, ' ')                                     // drop the www. prefix
+    .replace(/[\w.+-]+@[\w-]+\.[a-z]{2,}/gi, ' ')                  // emails
+    .replace(TLD_RE, '$1')                                         // saltyseacoffee.com -> saltyseacoffee
+    .replace(/\b([a-z0-9][a-z0-9-]*)\.([a-z]{2,63})\b/gi, '$1 $2') // any other x.y -> x y
+    .replace(/\s+/g, ' ').trim();
+}
+const hasLink = s => LINK_RE.test(s);
+function cleanDesc(desc) {
+  return stripLinks(desc.replace(/\*/g, ' '))
+    .replace(/\s+\d{4,}\b/g, '').replace(/#\d+/g, '')
+    .replace(/\s+/g, ' ').trim().toLowerCase()
+    .replace(/\b\w/g, c => c.toUpperCase()).slice(0, 26).trim() || 'Charge';
+}
 
-function render() {
-  const from = document.getElementById('date-from').value;
-  const to   = document.getElementById('date-to').value;
+/* ============================== steps ============================== */
+function goStep(n) {
+  currentStep = n;
+  [1, 2, 3].forEach(i => $('pane-' + i).classList.toggle('on', i === n));
+  document.querySelectorAll('.step').forEach(el => {
+    const s = +el.dataset.step;
+    el.classList.toggle('active', s === n);
+    el.classList.toggle('done', s < n && allRows.length > 0);
+    el.classList.toggle('clickable', s === 1 || allRows.length > 0);
+  });
+  if (n === 3) buildRequests();
+}
+$('stepper').addEventListener('click', e => {
+  const el = e.target.closest('.step');
+  if (!el || !el.classList.contains('clickable')) return;
+  goStep(+el.dataset.step);
+});
+
+/* ============================== step 2: review ============================== */
+function computeFiltered() {
+  const from = $('date-from').value, to = $('date-to').value;
+  const q = $('search').value.trim().toLowerCase();
   filteredRows = allRows.filter(r => {
     const d = parseDate(r.date);
     if (from && d < fromInputDate(from)) return false;
-    if (to   && d > fromInputDate(to))   return false;
+    if (to && d > fromInputDate(to)) return false;
+    if (q && !(r.desc.toLowerCase().includes(q) || r.cat.toLowerCase().includes(q))) return false;
     return true;
   });
-  const filtered = filteredRows;
+}
+
+function renderTable() {
+  computeFiltered();
   const byDate = {};
-  filtered.forEach(r => { if (!byDate[r.date]) byDate[r.date]=[]; byDate[r.date].push(r); });
-  const dates = Object.keys(byDate).sort((a,b)=>parseDate(b)-parseDate(a));
-  const tbody = document.getElementById('tbody');
-  tbody.innerHTML = '';
-  let gTotal=0, gWife=0;
+  filteredRows.forEach(r => { (byDate[r.date] = byDate[r.date] || []).push(r); });
+  const dates = Object.keys(byDate).sort((a, b) => parseDate(b) - parseDate(a));
+  const tbody = $('tbody');
+  const html = [];
 
   dates.forEach(date => {
     const items = byDate[date];
-    let dTotal=0, dWife=0;
-    items.forEach(r => { dTotal+=r.amt; dWife+=r.amt*(getPct(r)/100); });
-    gTotal+=dTotal; gWife+=dWife;
-    const hrow = document.createElement('tr');
-    hrow.className = 'day-group';
-    hrow.innerHTML = `<td class="day-label" colspan="2">${date}</td><td></td><td class="day-total">${fmt(dTotal)}</td><td></td><td class="day-wife"><span>${fmt(dWife)}</span><button class="day-venmo-btn" data-date="${date}">V</button></td>`;
-    tbody.appendChild(hrow);
-
+    const dTotal = items.reduce((s, r) => s + Math.abs(r.amt), 0);
+    const dWife = items.reduce((s, r) => s + share(r), 0);
+    html.push(
+      '<tr class="day-group"><td></td><td class="day-label" data-date="' + esc(date) + '" title="Select this day" colspan="2">' +
+      esc(date) + '</td><td></td><td class="day-total">' + money(dTotal) + '</td><td></td>' +
+      '<td class="day-wife">' + money(dWife) + '</td></tr>'
+    );
     items.forEach(row => {
-      const pct = getPct(row); const wifeAmt = row.amt*(pct/100); const key = getKey(row);
-      const tr = document.createElement('tr');
-      tr.className = 'item'+(pct===0?' zero':'');
-      tr.innerHTML = `
-        <td style="color:var(--muted);font-family:var(--mono);font-size:10px;white-space:nowrap">${row.date}</td>
-        <td class="desc">${row.desc}${pct===0?'<span class="pill">excl</span>':''}</td>
-        <td class="cat">${row.cat}</td>
-        <td class="amount">${fmt(row.amt)}</td>
-        <td class="pct-cell">
-          <div class="pct-wrap">
-            <input class="pct-slider" type="range" min="0" max="100" step="5" value="${pct}" data-key="${key}">
-            <input class="pct-num" type="number" min="0" max="100" value="${pct}" data-key="${key}">
-          </div>
-          <div class="qset">
-            <button class="qbtn" data-key="${key}" data-val="0">0%</button>
-            <button class="qbtn" data-key="${key}" data-val="45">45%</button>
-            <button class="qbtn" data-key="${key}" data-val="50">50%</button>
-            <button class="qbtn" data-key="${key}" data-val="100">100%</button>
-          </div>
-        </td>
-        <td class="wife-share">${pct===0?'—':fmt(wifeAmt)}</td>`;
-      tbody.appendChild(tr);
+      const pct = getPct(row), wife = share(row);
+      html.push(
+        '<tr class="item' + (pct === 0 ? ' zero' : '') + (selected.has(row.id) ? ' sel' : '') + '" data-id="' + row.id + '">' +
+        '<td class="chk"><input type="checkbox" data-id="' + row.id + '"' + (selected.has(row.id) ? ' checked' : '') + '></td>' +
+        '<td style="color:var(--muted);font-family:var(--mono);font-size:10px;white-space:nowrap">' + esc(row.date) + '</td>' +
+        '<td class="desc" title="' + esc(row.desc) + '">' + esc(row.desc) + (pct === 0 ? '<span class="pill">excl</span>' : '') + '</td>' +
+        '<td class="cat" data-cat="' + esc(row.cat) + '" title="Select all in this category">' + esc(row.cat) + '</td>' +
+        '<td class="amount">' + money(row.amt) + '</td>' +
+        '<td class="pct-cell"><div class="pct-wrap">' +
+          '<input class="pct-slider" type="range" min="0" max="100" step="5" value="' + pct + '" data-id="' + row.id + '">' +
+          '<input class="pct-num" type="number" min="0" max="100" value="' + pct + '" data-id="' + row.id + '">' +
+        '</div><div class="qset">' +
+          [0, 45, 50, 100].map(v => '<button class="qbtn" data-id="' + row.id + '" data-val="' + v + '">' + v + '%</button>').join('') +
+        '</div></td>' +
+        '<td class="wife-share">' + (pct === 0 ? '—' : money(wife)) + '</td></tr>'
+      );
     });
   });
 
-  document.getElementById('s-total').textContent = fmtPos(gTotal);
-  document.getElementById('s-wife').textContent  = fmtPos(gWife);
-  document.getElementById('s-you').textContent   = fmtPos(gTotal-gWife);
-  document.getElementById('s-count').textContent = filtered.length;
-
-  document.getElementById('venmo-btn').onclick = () => {
-    const user = document.getElementById('venmo-user').value.trim();
-    const amt = Math.abs(gWife).toFixed(2);
-    const note = encodeURIComponent('Your share of expenses 💳');
-    const base = user ? `https://venmo.com/${encodeURIComponent(user)}` : 'https://venmo.com/';
-    window.open(`${base}?txn=charge&amount=${amt}&note=${note}`, '_blank');
-  };
-
-  const hasRows = filtered.length > 0;
-  document.getElementById('main').style.display = hasRows ? 'flex' : 'none';
-  document.getElementById('empty-state').style.display = hasRows ? 'none' : 'flex';
-
+  tbody.innerHTML = html.join('');
+  const has = filteredRows.length > 0;
+  $('table-scroll').style.display = has ? 'block' : 'none';
+  $('empty-state').style.display = has ? 'none' : 'flex';
+  $('check-all').checked = has && filteredRows.every(r => selected.has(r.id));
+  updateSummary();
+  updateBulkBar();
 }
 
-function updateSummaryTotals() {
-  let gTotal = 0, gWife = 0;
-  filteredRows.forEach(r => { gTotal += r.amt; gWife += r.amt * (getPct(r) / 100); });
-  document.getElementById('s-total').textContent = fmtPos(gTotal);
-  document.getElementById('s-wife').textContent  = fmtPos(gWife);
-  document.getElementById('s-you').textContent   = fmtPos(gTotal - gWife);
+function updateSummary() {
+  const total = filteredRows.reduce((s, r) => s + Math.abs(r.amt), 0);
+  const wife = filteredRows.reduce((s, r) => s + share(r), 0);
+  $('s-total').textContent = money(total);
+  $('s-wife').textContent = money(wife);
+  $('s-you').textContent = money(total - wife);
+  $('s-count').textContent = filteredRows.length;
 }
 
 function updateRowInPlace(tr, row, val) {
-  tr.className = 'item' + (val === 0 ? ' zero' : '');
+  tr.classList.toggle('zero', val === 0);
   const wifeCell = tr.querySelector('.wife-share');
-  if (wifeCell) wifeCell.textContent = val === 0 ? '—' : fmt(row.amt * (val / 100));
+  if (wifeCell) wifeCell.textContent = val === 0 ? '—' : money(Math.abs(row.amt) * val / 100);
   const descCell = tr.querySelector('.desc');
   if (descCell) {
     const pill = descCell.querySelector('.pill');
     if (val === 0 && !pill) descCell.insertAdjacentHTML('beforeend', '<span class="pill">excl</span>');
     else if (val !== 0 && pill) pill.remove();
   }
-  const numInput = tr.querySelector('.pct-num');
-  if (numInput) numInput.value = val;
+  const num = tr.querySelector('.pct-num');
+  if (num && document.activeElement !== num) num.value = val;
+  const sl = tr.querySelector('.pct-slider');
+  if (sl && document.activeElement !== sl) sl.value = val;
 }
-
-function cleanDesc(desc) {
-  return desc
-    .replace(/\*/g, ' ')
-    .replace(/\s+\d{5,}/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .toLowerCase()
-    .replace(/\b\w/g, c => c.toUpperCase())
-    .slice(0, 25)
-    .trim();
-}
-
-function buildDayNote(date, items) {
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const [m, d] = date.split('/');
-  const header = `${months[parseInt(m)-1]} ${parseInt(d)} — your share:`;
-  const lines = items
-    .filter(r => getPct(r) > 0)
-    .map(r => {
-      const pct = getPct(r);
-      return `• ${cleanDesc(r.desc)} $${Math.abs(r.amt * pct / 100).toFixed(2)} (${pct}%)`;
-    });
-  const total = Math.abs(items.reduce((s, r) => s + r.amt * (getPct(r) / 100), 0)).toFixed(2);
-  let note = [header, ...lines, `Total: $${total}`].join('\n');
-  if (note.length > 280) note = note.slice(0, 279) + '…';
-  return note;
-}
-
-function setupDelegation() {
-  const tbody = document.getElementById('tbody');
-
-  // Slider drag: update in-place (no DOM rebuild, keeps drag working)
-  tbody.addEventListener('input', e => {
-    if (!e.target.classList.contains('pct-slider')) return;
-    const row = allRows.find(r => getKey(r) === e.target.dataset.key);
-    if (!row) return;
-    const val = parseInt(e.target.value);
-    setPct(row, val);
-    updateRowInPlace(e.target.closest('tr.item'), row, val);
-    updateSummaryTotals();
-  });
-
-  // Slider drag end OR number input commit: full re-render (updates day totals etc.)
-  tbody.addEventListener('change', e => {
-    if (e.target.classList.contains('pct-slider')) { render(); return; }
-    if (!e.target.classList.contains('pct-num')) return;
-    const val = Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
-    const row = allRows.find(r => getKey(r) === e.target.dataset.key);
-    if (row) { setPct(row, val); render(); }
-  });
-
-  // Quick % buttons
-  tbody.addEventListener('click', e => {
-    const qbtn = e.target.closest('.qbtn');
-    if (qbtn) {
-      const row = allRows.find(r => getKey(r) === qbtn.dataset.key);
-      if (row) { setPct(row, parseInt(qbtn.dataset.val)); render(); }
-      return;
-    }
-    // Per-day Venmo button
-    const vbtn = e.target.closest('.day-venmo-btn');
-    if (vbtn) {
-      const date = vbtn.dataset.date;
-      const user = document.getElementById('venmo-user').value.trim();
-      const items = filteredRows.filter(r => r.date === date);
-      const amt = Math.abs(items.reduce((s, r) => s + r.amt * (getPct(r) / 100), 0)).toFixed(2);
-      const note = encodeURIComponent(buildDayNote(date, items));
-      const base = user ? `https://venmo.com/${encodeURIComponent(user)}` : 'https://venmo.com/';
-      window.open(`${base}?txn=charge&amount=${amt}&note=${note}`, '_blank');
-    }
+function updateDayTotals() {
+  document.querySelectorAll('tr.day-group').forEach(tr => {
+    const date = tr.querySelector('.day-label').dataset.date;
+    const items = filteredRows.filter(r => r.date === date);
+    tr.querySelector('.day-wife').textContent = money(items.reduce((s, r) => s + share(r), 0));
   });
 }
-
-function loadCSV(text) {
-  allRows = parseCSV(text); pctMap = {};
-  if (!allRows.length) { alert('No charge transactions found.'); return; }
-  const dates = allRows.map(r=>r.date).sort();
-  document.getElementById('date-from').value = toInputDate(dates[0]);
-  document.getElementById('date-to').value   = toInputDate(dates[dates.length-1]);
-  document.getElementById('drop-zone').style.display = 'none';
-  render();
+function updateBulkBar() {
+  const n = selected.size;
+  $('bulk-bar').classList.toggle('on', n > 0);
+  $('bulk-count').textContent = n + ' selected';
+}
+function setSelection(ids, on) {
+  ids.forEach(id => on ? selected.add(id) : selected.delete(id));
+  document.querySelectorAll('tr.item').forEach(tr => {
+    const on2 = selected.has(tr.dataset.id);
+    tr.classList.toggle('sel', on2);
+    const cb = tr.querySelector('.chk input');
+    if (cb) cb.checked = on2;
+  });
+  updateBulkBar();
+}
+function applyBulk(val) {
+  if (!selected.size) return;
+  allRows.forEach(r => { if (selected.has(r.id)) setPct(r, val); });
+  renderTable();
 }
 
-const dz = document.getElementById('drop-zone');
-dz.addEventListener('click', ()=>document.getElementById('file-input').click());
-dz.addEventListener('dragover', e=>{e.preventDefault();dz.classList.add('drag');});
-dz.addEventListener('dragleave', ()=>dz.classList.remove('drag'));
-dz.addEventListener('drop', e=>{e.preventDefault();dz.classList.remove('drag');const f=e.dataTransfer.files[0];if(f){const r=new FileReader();r.onload=ev=>loadCSV(ev.target.result);r.readAsText(f);}});
-document.getElementById('file-input').addEventListener('change', e=>{const f=e.target.files[0];if(f){const r=new FileReader();r.onload=ev=>loadCSV(ev.target.result);r.readAsText(f);}});
-document.getElementById('apply-btn').addEventListener('click', render);
-document.getElementById('reset-btn').addEventListener('click', ()=>{pctMap={};render();});
-document.getElementById('default-pct').addEventListener('change', render);
-document.getElementById('new-btn').addEventListener('click', ()=>{
-  allRows=[]; pctMap={};
-  document.getElementById('main').style.display='none';
-  document.getElementById('drop-zone').style.display='flex';
-  document.getElementById('file-input').value='';
+/* --- table events --- */
+const tbody = $('tbody');
+tbody.addEventListener('input', e => {
+  if (!e.target.classList.contains('pct-slider')) return;
+  const row = allRows.find(r => r.id === e.target.dataset.id);
+  if (!row) return;
+  const val = parseInt(e.target.value);
+  const ids = selected.has(row.id) ? [...selected] : [row.id];
+  ids.forEach(id => { const r = allRows.find(x => x.id === id); if (r) setPct(r, val); });
+  ids.forEach(id => {
+    const tr = tbody.querySelector('tr.item[data-id="' + id + '"]');
+    const r = allRows.find(x => x.id === id);
+    if (tr && r) updateRowInPlace(tr, r, val);
+  });
+  updateSummary(); updateDayTotals();
 });
-setupDelegation();
+tbody.addEventListener('change', e => {
+  if (e.target.classList.contains('pct-slider')) { renderTable(); return; }
+  if (e.target.type === 'checkbox' && e.target.dataset.id) {
+    setSelection([e.target.dataset.id], e.target.checked); return;
+  }
+  if (!e.target.classList.contains('pct-num')) return;
+  const val = Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
+  const row = allRows.find(r => r.id === e.target.dataset.id);
+  if (!row) return;
+  if (selected.has(row.id)) applyBulk(val);
+  else { setPct(row, val); renderTable(); }
+});
+tbody.addEventListener('click', e => {
+  const qbtn = e.target.closest('.qbtn');
+  if (qbtn) {
+    const row = allRows.find(r => r.id === qbtn.dataset.id);
+    if (!row) return;
+    const val = parseInt(qbtn.dataset.val);
+    if (selected.has(row.id)) applyBulk(val);
+    else { setPct(row, val); renderTable(); }
+    return;
+  }
+  const dayLabel = e.target.closest('.day-label');
+  if (dayLabel) {
+    const ids = filteredRows.filter(r => r.date === dayLabel.dataset.date).map(r => r.id);
+    setSelection(ids, !ids.every(id => selected.has(id)));
+    return;
+  }
+  const catCell = e.target.closest('.cat');
+  if (catCell) {
+    const ids = filteredRows.filter(r => r.cat === catCell.dataset.cat).map(r => r.id);
+    setSelection(ids, !ids.every(id => selected.has(id)));
+  }
+});
+
+$('check-all').addEventListener('change', e => setSelection(filteredRows.map(r => r.id), e.target.checked));
+$('bulk-clear').addEventListener('click', () => setSelection([...selected], false));
+$('bulk-apply').addEventListener('click', () => applyBulk(parseInt($('bulk-pct').value) || 0));
+$('bulk-bar').addEventListener('click', e => {
+  const b = e.target.closest('[data-bulk]');
+  if (b) applyBulk(parseInt(b.dataset.bulk));
+});
+['date-from', 'date-to'].forEach(id => $(id).addEventListener('change', renderTable));
+$('search').addEventListener('input', renderTable);
+$('default-pct').addEventListener('change', () => {
+  try { localStorage.setItem(LS.pct, $('default-pct').value); } catch (e) {}
+  renderTable();
+});
+$('reset-btn').addEventListener('click', () => { pctMap = {}; renderTable(); });
+$('to-send-btn').addEventListener('click', () => goStep(3));
+
+/* ============================== step 3: requests ============================== */
+function weekKey(d) {
+  const s = new Date(d); s.setDate(s.getDate() - s.getDay()); s.setHours(0, 0, 0, 0);
+  return s;
+}
+function groupRows(mode) {
+  const groups = new Map(); // key -> {key, label, sub, rows, sort}
+  const push = (key, label, sort, r) => {
+    if (!groups.has(key)) groups.set(key, { key, label, sort, rows: [] });
+    groups.get(key).rows.push(r);
+  };
+  const rows = filteredRows.filter(r => getPct(r) > 0);
+  rows.forEach(r => {
+    const d = parseDate(r.date);
+    if (mode === 'single') push('all', 'All charges', 0, r);
+    else if (mode === 'day') push('d:' + r.date, prettyDate(r.date), -d.getTime(), r);
+    else if (mode === 'week') {
+      const ws = weekKey(d), we = new Date(ws); we.setDate(we.getDate() + 6);
+      const label = MONTHS[ws.getMonth()] + ' ' + ws.getDate() + ' – ' + MONTHS[we.getMonth()] + ' ' + we.getDate();
+      push('w:' + ws.getTime(), label, -ws.getTime(), r);
+    } else push('c:' + (r.cat || 'Other'), r.cat || 'Other', 0, r);
+  });
+  const out = [...groups.values()];
+  out.sort((a, b) => a.sort - b.sort || a.label.localeCompare(b.label));
+  return out;
+}
+function buildNote(label, rows, mode) {
+  const head = mode === 'single' ? 'Your share of our charges:'
+             : mode === 'category' ? label + ' — your share:'
+             : label + ' — your share:';
+  const lines = rows.map(r => '• ' + cleanDesc(r.desc) + ' ' + money(share(r)) + ' (' + getPct(r) + '%)');
+  const total = rows.reduce((s, r) => s + share(r), 0);
+  let note = [head, ...lines, 'Total: ' + money(total)].join('\n');
+  if (note.length > 280) {
+    // drop line items until it fits, keep header + total
+    const keep = [];
+    let len = head.length + ('\nTotal: ' + money(total)).length;
+    for (const l of lines) {
+      if (len + l.length + 1 > 268) { keep.push('• +' + (lines.length - keep.length) + ' more'); break; }
+      keep.push(l); len += l.length + 1;
+    }
+    note = [head, ...keep, 'Total: ' + money(total)].join('\n');
+  }
+  return note.split('\n').map(l => stripLinks(l)).join('\n');
+}
+function buildRequests(force) {
+  const mode = $('group-mode').value;
+  const groups = groupRows(mode);
+  requests = groups.map(g => {
+    const amount = g.rows.reduce((s, r) => s + share(r), 0);
+    const prev = reqState[g.key];
+    return {
+      id: g.key,
+      label: g.label,
+      count: g.rows.length,
+      rows: g.rows,
+      amount: (prev && !force && prev.amount != null) ? prev.amount : +amount.toFixed(2),
+      note: (prev && !force && prev.note) ? prev.note : buildNote(g.label, g.rows, mode),
+      status: (prev && prev.status) || 'pending'
+    };
+  });
+  requests.forEach(r => { reqState[r.id] = { status: r.status, note: r.note, amount: r.amount }; });
+  renderQueue();
+}
+function venmoURL(req) {
+  const user = $('venmo-user').value.trim();
+  const base = user ? 'https://venmo.com/' + encodeURIComponent(user.replace(/^@/, '')) : 'https://venmo.com/';
+  return base + '?txn=charge&amount=' + Math.abs(req.amount).toFixed(2) + '&note=' + encodeURIComponent(req.note);
+}
+function renderQueue() {
+  const q = $('queue');
+  const nextId = (requests.find(r => r.status === 'pending') || {}).id;
+  q.innerHTML = requests.map(r => {
+    const over = r.note.length > 280;
+    return '<div class="req ' + r.status + (r.id === nextId ? ' next' : '') + '" data-id="' + esc(r.id) + '">' +
+      '<div class="req-top">' +
+        '<span class="req-title">' + esc(r.label) + '</span>' +
+        '<span class="req-meta">' + r.count + ' item' + (r.count === 1 ? '' : 's') + '</span>' +
+        '<span class="badge ' + r.status + '">' + r.status + '</span>' +
+        '<span class="req-amt"><span>$</span><input type="number" step="0.01" min="0" class="req-amt-in" value="' + r.amount.toFixed(2) + '" data-id="' + esc(r.id) + '"></span>' +
+      '</div>' +
+      '<textarea class="req-note" data-id="' + esc(r.id) + '" rows="' + Math.min(12, r.note.split('\n').length) + '">' + esc(r.note) + '</textarea>' +
+      '<div class="req-actions">' +
+        '<button class="venmo-btn" data-act="open" data-id="' + esc(r.id) + '"><span class="v">V</span> ' + (r.status === 'sent' ? 'Open again' : 'Open in Venmo') + '</button>' +
+        '<button class="rst-btn" data-act="copy" data-id="' + esc(r.id) + '">Copy note</button>' +
+        (r.status === 'pending'
+          ? '<button class="rst-btn" data-act="sent" data-id="' + esc(r.id) + '">Mark sent</button>' +
+            '<button class="rst-btn" data-act="skip" data-id="' + esc(r.id) + '">Skip</button>'
+          : '<button class="rst-btn" data-act="undo" data-id="' + esc(r.id) + '">Undo</button>') +
+        '<span class="note-warn"' + (hasLink(r.note) ? '' : ' hidden') + '>⚠ looks like a link — Venmo will reject it</span>' +
+        '<span class="note-len' + (over ? ' over' : '') + '">' + r.note.length + '/280</span>' +
+      '</div></div>';
+  }).join('') || '<div class="hint" style="padding:20px">Nothing to request — every charge in range is set to 0%.</div>';
+  updateQueueStats();
+}
+function updateQueueStats() {
+  const total = requests.reduce((s, r) => s + r.amount, 0);
+  const sent = requests.filter(r => r.status === 'sent');
+  const sentAmt = sent.reduce((s, r) => s + r.amount, 0);
+  const left = requests.filter(r => r.status === 'pending').reduce((s, r) => s + r.amount, 0);
+  $('q-count').textContent = requests.length;
+  $('q-sent').textContent = sent.length + '/' + requests.length;
+  $('q-amt').textContent = money(sentAmt);
+  $('q-left').textContent = money(left);
+  $('q-bar').style.width = (requests.length ? (sent.length / requests.length * 100) : 0) + '%';
+  const nextPending = requests.some(r => r.status === 'pending');
+  $('open-next').disabled = !nextPending;
+  $('open-all').disabled = !nextPending;
+}
+function setStatus(id, status) {
+  const r = requests.find(x => x.id === id);
+  if (!r) return;
+  r.status = status;
+  reqState[id] = { status, note: r.note, amount: r.amount };
+  renderQueue();
+}
+function openRequest(r) {
+  window.open(venmoURL(r), '_blank', 'noopener');
+  if (r.status === 'pending') setStatus(r.id, 'sent'); else renderQueue();
+}
+$('queue').addEventListener('click', e => {
+  const btn = e.target.closest('[data-act]');
+  if (!btn) return;
+  const r = requests.find(x => x.id === btn.dataset.id);
+  if (!r) return;
+  const act = btn.dataset.act;
+  if (act === 'open') openRequest(r);
+  else if (act === 'sent') setStatus(r.id, 'sent');
+  else if (act === 'skip') setStatus(r.id, 'skipped');
+  else if (act === 'undo') setStatus(r.id, 'pending');
+  else if (act === 'copy') {
+    navigator.clipboard.writeText(r.note).then(() => {
+      btn.textContent = 'Copied ✓';
+      setTimeout(() => { btn.textContent = 'Copy note'; }, 1200);
+    });
+  }
+});
+$('queue').addEventListener('input', e => {
+  const id = e.target.dataset.id;
+  if (!id) return;
+  const r = requests.find(x => x.id === id);
+  if (!r) return;
+  if (e.target.classList.contains('req-note')) {
+    r.note = e.target.value;
+    const card = e.target.closest('.req');
+    const len = card.querySelector('.note-len');
+    len.textContent = r.note.length + '/280';
+    len.classList.toggle('over', r.note.length > 280);
+    card.querySelector('.note-warn').hidden = !hasLink(r.note);
+  } else if (e.target.classList.contains('req-amt-in')) {
+    r.amount = Math.max(0, parseFloat(e.target.value) || 0);
+    updateQueueStats();
+  }
+  reqState[id] = { status: r.status, note: r.note, amount: r.amount };
+});
+$('open-next').addEventListener('click', () => {
+  const next = requests.find(r => r.status === 'pending');
+  if (next) openRequest(next);
+});
+$('open-all').addEventListener('click', () => {
+  const pending = requests.filter(r => r.status === 'pending');
+  if (!pending.length) return;
+  if (pending.length > 3 && !confirm('Open ' + pending.length + ' Venmo tabs at once? Your browser may ask you to allow pop-ups.')) return;
+  let blocked = 0;
+  pending.forEach((r, i) => {
+    setTimeout(() => {
+      const w = window.open(venmoURL(r), '_blank', 'noopener');
+      if (!w) blocked++;
+      setStatus(r.id, 'sent');
+      if (i === pending.length - 1) {
+        $('popup-hint').textContent = blocked ? blocked + ' tab(s) were blocked — allow pop-ups for this page, then use “Open next request”.' : '';
+      }
+    }, i * 350);
+  });
+});
+$('copy-all').addEventListener('click', () => {
+  const txt = requests.map(r => '=== ' + r.label + ' — ' + money(r.amount) + ' [' + r.status + '] ===\n' + r.note).join('\n\n');
+  navigator.clipboard.writeText(txt).then(() => {
+    const b = $('copy-all'); b.textContent = 'Copied ✓';
+    setTimeout(() => { b.textContent = 'Copy all as text'; }, 1200);
+  });
+});
+$('reset-status').addEventListener('click', () => {
+  requests.forEach(r => { r.status = 'pending'; reqState[r.id].status = 'pending'; });
+  renderQueue();
+});
+$('group-mode').addEventListener('change', () => {
+  try { localStorage.setItem(LS.group, $('group-mode').value); } catch (e) {}
+  reqState = {};
+  buildRequests(true);
+});
+$('rebuild-btn').addEventListener('click', () => {
+  const statuses = {};
+  requests.forEach(r => statuses[r.id] = r.status);
+  reqState = {};
+  buildRequests(true);
+  requests.forEach(r => { if (statuses[r.id]) { r.status = statuses[r.id]; reqState[r.id].status = r.status; } });
+  renderQueue();
+});
+$('venmo-user').addEventListener('change', () => {
+  try { localStorage.setItem(LS.user, $('venmo-user').value.trim()); } catch (e) {}
+});
+$('back-btn').addEventListener('click', () => goStep(2));
+
+/* ============================== load ============================== */
+function loadCSV(text) {
+  const rows = parseCSV(text);
+  if (!rows.length) { alert('No charge transactions found in that CSV.'); return; }
+  allRows = rows; pctMap = {}; selected.clear(); reqState = {};
+  const dates = allRows.map(r => r.date).sort((a, b) => parseDate(a) - parseDate(b));
+  $('date-from').value = toInputDate(dates[0]);
+  $('date-to').value = toInputDate(dates[dates.length - 1]);
+  renderTable();
+  goStep(2);
+}
+const dz = $('drop-zone');
+const readFile = f => { const r = new FileReader(); r.onload = ev => loadCSV(ev.target.result); r.readAsText(f); };
+dz.addEventListener('click', () => $('file-input').click());
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag'); const f = e.dataTransfer.files[0]; if (f) readFile(f); });
+$('file-input').addEventListener('change', e => { const f = e.target.files[0]; if (f) readFile(f); });
+$('new-btn').addEventListener('click', () => {
+  allRows = []; pctMap = {}; selected.clear(); requests = []; reqState = {};
+  $('file-input').value = '';
+  $('search').value = '';
+  goStep(1);
+});
+
+/* restore prefs */
+try {
+  const u = localStorage.getItem(LS.user); if (u) $('venmo-user').value = u;
+  const p = localStorage.getItem(LS.pct); if (p) $('default-pct').value = p;
+  const g = localStorage.getItem(LS.group); if (g) $('group-mode').value = g;
+} catch (e) {}
+goStep(1);
 </script>
 </body>
 </html>
