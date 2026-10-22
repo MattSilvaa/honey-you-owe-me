@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Honey, You Owe Me 💸</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Owe Me">
+<meta name="theme-color" content="#0f0f0f">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -327,6 +335,8 @@ const $ = id => document.getElementById(id);
 /* ============================== theme ============================== */
 function applyTheme(t) {
   document.documentElement.setAttribute('data-theme', t);
+  const tc = document.querySelector('meta[name="theme-color"]');
+  if (tc) tc.setAttribute('content', t === 'light' ? '#f4f5ef' : '#0f0f0f');
   $('theme-btn').textContent = t === 'light' ? '☀' : '☾';
   $('theme-btn').title = t === 'light' ? 'Switch to dark' : 'Switch to light';
   try { localStorage.setItem(LS.theme, t); } catch (e) {}
